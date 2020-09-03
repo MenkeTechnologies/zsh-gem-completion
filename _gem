@@ -72,7 +72,7 @@ case "$words[1]" in
     _files -g "*.gemspec"
     ;;
   install)
-        __gem_search $CURRENT
+        __gem_search $PREFIX
         ;;
   list)
       if [[ "$state" == forms ]]; then
