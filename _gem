@@ -8,6 +8,8 @@ __gem_installed() {
 }
 
 __gem_search() {
+    local ary
+
     while read tag desc; do
         ary+=("$tag:$desc")
     done < <(gem search -q $1)
