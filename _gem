@@ -52,6 +52,8 @@ _1st_arguments=(
   'yank:Remove a specific gem version release from RubyGems.org'
 )
 
+zstyle ':completion:*:*:gem:*:remote-gem' list-grouped false
+
 local expl
 local -a gems installed_gems
 
