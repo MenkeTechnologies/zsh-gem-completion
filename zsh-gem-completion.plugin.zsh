@@ -5,3 +5,8 @@ alias gemp="gem push *.gem"
 function gemy {
 	gem yank $1 -v $2
 }
+
+0="${${0:#$ZSH_ARGZERO}:-${(%):-%N}}"
+0="${${(M)0:#/*}:-$PWD/$0}"
+
+fpath=("${0:h}/src" $fpath)
