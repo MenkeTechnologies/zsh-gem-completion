@@ -2,6 +2,14 @@
 
 This plugin has all functionality of OMZ gem completion but it also allows `gem install <tab>` to complete remote gems from output of `gem search`.
 
+## Install for Zinit
+> `~/.zshrc`
+```sh
+source "$HOME/.zinit/bin/zinit.zsh"
+zinit ice lucid nocompile
+zinit load MenkeTechnologies/zsh-gem-completion
+```
+
 ## Install for Oh My Zsh
 
 ```sh
