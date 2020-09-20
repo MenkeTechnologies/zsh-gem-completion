@@ -7,14 +7,42 @@ __gem_installed() {
   installed_gems=(${(f)"$(gem list --local --no-versions)"})
 }
 
+__gem_search_mem() {
+
+    local gems_cache_file gems_ary
+    local -a tmp_ary
+    gems_cache_file="gem_${PREFIX}_cache"
+    gems_ary="__gems_${PREFIX}"
+    ret=$(eval "printf \$+$gems_ary")
+
+    if (( ret == 0 )); then
+        if _cache_invalid $gems_cache_file || ! _retrieve_cache $gems_cache_file; then
+            while read tag desc; do
+                tmp_ary+=("${(q)tag}:${(q)desc}")
+            done < <(gem search -q $PREFIX)
+            eval "$gems_ary=($tmp_ary)"
+            _store_cache $gems_cache_file tmp_ary
+        fi
+        _describe -t remote-gem 'remote gems' tmp_ary
+    else
+        _describe -t remote-gem 'remote gems' $gems_ary
+    fi
+
+}
+
 __gem_search() {
-    local ary
 
-    while read tag desc; do
-        ary+=("$tag:$desc")
-    done < <(gem search -q $1)
+    local gems_cache_file gems_ary
+    local -a tmp_ary
+    gems_cache_file="gem_${PREFIX}_cache"
+    if _cache_invalid $gems_cache_file || ! _retrieve_cache $gems_cache_file; then
+        while read tag desc; do
+            tmp_ary+=("${(q)tag}:${(q)desc}")
+        done < <(gem search -q $PREFIX)
+        _store_cache $gems_cache_file tmp_ary
+    fi
+    _describe -t remote-gem 'remote gems' tmp_ary
 
-    _describe -t remote-gem 'remote gems' ary
 }
 
 local -a _1st_arguments
@@ -72,7 +100,7 @@ case "$words[1]" in
     _files -g "*.gemspec"
     ;;
   install)
-        __gem_search $PREFIX
+        __gem_search
         ;;
   list)
       if [[ "$state" == forms ]]; then
