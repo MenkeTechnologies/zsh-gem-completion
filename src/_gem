@@ -16,7 +16,7 @@ __gem_search_mem() {
     ret=$(eval "printf \$+$gems_ary")
 
     if (( ret == 0 )); then
-        if _cache_invalid $gems_cache_file || ! _retrieve_cache $gems_cache_file; then
+        if ! _retrieve_cache $gems_cache_file; then
             while read tag desc; do
                 tmp_ary+=("${(q)tag}:${(q)desc}")
             done < <(gem search -q $PREFIX)
@@ -35,7 +35,7 @@ __gem_search() {
     local gems_cache_file gems_ary
     local -a tmp_ary
     gems_cache_file="gem_${PREFIX}_cache"
-    if _cache_invalid $gems_cache_file || ! _retrieve_cache $gems_cache_file; then
+    if ! _retrieve_cache $gems_cache_file; then
         while read tag desc; do
             tmp_ary+=("${(q)tag}:${(q)desc}")
         done < <(gem search -q $PREFIX)
