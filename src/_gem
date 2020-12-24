@@ -13,15 +13,17 @@ __gem_search_mem() {
     local -a tmp_ary
     gems_cache_file="gem_${PREFIX}_cache"
     gems_ary="__gems_${PREFIX}"
-    ret=$(eval "printf \$+$gems_ary")
+    ret=$(eval "printf \$+$gems_ary" &>/dev/null)
 
     if (( ret == 0 )); then
         if ! _retrieve_cache $gems_cache_file; then
             while read tag desc; do
                 tmp_ary+=("${(q)tag}:${(q)desc}")
             done < <(gem search -q $PREFIX)
-            eval "$gems_ary=($tmp_ary)"
-            _store_cache $gems_cache_file tmp_ary
+            if (( $#tmp_ary )); then
+                eval "$gems_ary=($tmp_ary)"
+                _store_cache $gems_cache_file tmp_ary
+            fi
         fi
         _describe -t remote-gem 'remote gems' tmp_ary
     else
