@@ -19,7 +19,7 @@ __gem_search_mem() {
         if ! _retrieve_cache $gems_cache_file; then
             while read tag desc; do
                 tmp_ary+=("${(q)tag}:${(q)desc}")
-            done < <(gem search -q $PREFIX)
+            done < <(gem search -q $PREFIX 2>/dev/null)
             if (( $#tmp_ary )); then
                 eval "$gems_ary=($tmp_ary)"
                 _store_cache $gems_cache_file tmp_ary
@@ -40,7 +40,7 @@ __gem_search() {
     if ! _retrieve_cache $gems_cache_file; then
         while read tag desc; do
             tmp_ary+=("${(q)tag}:${(q)desc}")
-        done < <(gem search -q $PREFIX)
+        done < <(gem search -q $PREFIX 2>/dev/null)
         _store_cache $gems_cache_file tmp_ary
     fi
     _describe -t remote-gem 'remote gems' tmp_ary
