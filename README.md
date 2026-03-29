@@ -1,5 +1,7 @@
 # zsh-gem-completion
 
+[![CI](https://github.com/MenkeTechnologies/zsh-gem-completion/actions/workflows/ci.yml/badge.svg)](https://github.com/MenkeTechnologies/zsh-gem-completion/actions/workflows/ci.yml)
+
 This plugin has all functionality of OMZ gem completion but it also allows `gem install <tab>` to complete remote gems from output of `gem search`.
 
 ## Install for Zinit
