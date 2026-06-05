@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="zsh-gem-completion — Engineering report. Full OMZ gem completion plus live remote completion for `gem install` via `gem search`. 127 LOC across _gem + plugin entrypoint, 41 zunit @test cases across 7 contract/syntax/alias files, 21 structural gates.">
+  <title>zsh-gem-completion &mdash; Engineering Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&amp;family=Share+Tech+Mono&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="hud-static.css">
+  <link rel="stylesheet" href="tutorial.css">
+  <style>
+    .tutorial-main { max-width: 76rem; }
+
+    .file-table { width:100%;border-collapse:collapse;margin:0.6rem 0;font-size:12px; }
+    .file-table th { background:var(--bg-secondary);color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;text-align:left;padding:7px 10px;border:1px solid var(--border); }
+    .file-table td { padding:6px 10px;border:1px solid var(--border);color:var(--text-dim);vertical-align:middle; }
+    .file-table tr:hover td { background:var(--bg-hover); }
+    .file-table td:first-child { font-family:'Share Tech Mono',monospace;color:var(--accent-light);font-weight:600;white-space:nowrap; }
+    .file-table .num { text-align:right;font-family:'Share Tech Mono',monospace; }
+    .file-table .total-row td { background:var(--bg-secondary);font-weight:700;color:var(--text);border-top:2px solid var(--cyan); }
+    .file-table code { font-size:11px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+
+    .stat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:0.75rem;margin:1.2rem 0; }
+    .stat-card { border:1px solid var(--border);border-top:3px solid var(--cyan);background:var(--bg-card);padding:1rem 1.2rem;border-radius:2px;text-align:center; }
+    .stat-card .stat-val { font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;color:var(--cyan);line-height:1.1;text-shadow:0 0 20px var(--cyan-glow); }
+    .stat-card .stat-val.accent { color:var(--accent);text-shadow:0 0 20px var(--accent-glow); }
+    .stat-card .stat-val.green  { color:var(--green);text-shadow:0 0 20px rgba(57,255,20,.3); }
+    .stat-card .stat-label { font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-top:0.5rem; }
+    @keyframes glow-pulse { 0%,100%{text-shadow:0 0 20px var(--cyan-glow)}50%{text-shadow:0 0 40px var(--cyan-glow),0 0 80px var(--cyan-dim)} }
+    .stat-card .stat-val { animation:glow-pulse 3s ease-in-out infinite; }
+
+    .section-rule { border:none;border-top:1px dashed var(--border);margin:2rem 0; }
+
+    .feature-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(22rem,1fr));gap:0.65rem;margin:0.8rem 0; }
+    .feature-card { border:1px solid var(--border);border-left:3px solid var(--cyan);background:var(--bg-card);padding:0.7rem 1rem;border-radius:2px; }
+    .feature-card h4 { font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin:0 0 0.3rem; }
+    .feature-card p { margin:0;font-size:11px;color:var(--text-dim);line-height:1.55; }
+    .feature-card code { font-size:10.5px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+    .feature-card ul { margin:0.3rem 0 0;padding-left:1.2rem;font-size:11px;color:var(--text-dim);line-height:1.6; }
+    .feature-card li code { font-size:10px; }
+  </style>
+</head>
+<body>
+  <div class="app tutorial-app" id="reportApp">
+    <div class="crt-scanline" id="crtH" aria-hidden="true"></div>
+    <div class="crt-scanline-v" id="crtV" aria-hidden="true"></div>
+
+    <header class="tutorial-header">
+      <div class="tutorial-header-inner">
+        <div>
+          <h1 class="tutorial-brand">// ZSH-GEM-COMPLETION &mdash; ENGINEERING REPORT</h1>
+          <nav class="tutorial-crumbs" aria-label="Breadcrumb">
+            <span class="current">Engineering Report</span>
+            <span class="sep">/</span>
+            <a href="index.html">Docs</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/zsh-gem-completion" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/MenkeTechnologiesMeta" target="_blank" rel="noopener noreferrer">Meta</a>
+          </nav>
+          <p style="margin:0.35rem 0 0;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:0.03em;opacity:0.75;">
+            Full OMZ gem completion &middot; live remote <code>gem search</code> for <code>gem install</code> &middot; in-shell + on-disk dual-layer cache &middot; <code>list-grouped false</code> zstyle pin &middot; 3 publishing shortcuts
+          </p>
+        </div>
+        <div class="tutorial-toolbar">
+          <button type="button" class="btn btn-secondary" id="btnTheme" title="Toggle light/dark">Theme</button>
+          <button type="button" class="btn btn-secondary active" id="btnCrt" title="CRT scanline overlay">CRT</button>
+          <button type="button" class="btn btn-secondary active" id="btnNeon" title="Neon border pulse">Neon</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="tutorial-main">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 1: EXECUTIVE SUMMARY           -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>EXECUTIVE SUMMARY</h2>
+      <p class="tutorial-subtitle">zsh-gem-completion is a <code>#compdef gem</code> completion plugin that ships the entire OMZ gem-completion surface (30 subcommands &mdash; <code>install</code>, <code>uninstall</code>, <code>update</code>, <code>list</code>, <code>build</code>, <code>cert</code>, <code>fetch</code>, <code>owner</code>, <code>push</code>, <code>yank</code>, etc., all with man-page-quality descriptions) <strong>plus</strong> live remote package completion for <code>gem install &lt;TAB&gt;</code>. The remote dispatcher (<code>__gem_search</code>) shells out to <code>gem search -q $PREFIX 2&gt;/dev/null</code> and parses two-column output (<code>name version_string</code>) into zsh's <code>_describe</code> format with descriptions rendered inline in the menu. Two layers of caching absorb network cost: an in-shell typeset array (<code>__gems_${PREFIX}</code>) for the rest of the shell session, and <code>_retrieve_cache</code> / <code>_store_cache</code> on disk for cross-session persistence. The plugin entrypoint also registers three publishing shortcuts (<code>gemb</code> build, <code>gemp</code> push, <code>gemy</code> yank-with-version) for the standard gem-author workflow. A single <code>zstyle</code> line (<code>list-grouped false</code>) tells zsh's menu to render each candidate on its own row instead of grouping by description &mdash; legibility win for the remote-search code path where descriptions are long and unique.</p>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">127</div><div class="stat-label">Total LOC (src + plugin)</div></div>
+        <div class="stat-card"><div class="stat-val">30</div><div class="stat-label"><code>gem</code> Subcommands Completed</div></div>
+        <div class="stat-card"><div class="stat-val accent">41</div><div class="stat-label">zunit @test Cases</div></div>
+        <div class="stat-card"><div class="stat-val green">21</div><div class="stat-label">Structural Gates (.sh)</div></div>
+        <div class="stat-card"><div class="stat-val">7</div><div class="stat-label">zunit Files</div></div>
+        <div class="stat-card"><div class="stat-val">3</div><div class="stat-label">Aliases (<code>gemb</code>/<code>gemp</code>/<code>gemy</code>)</div></div>
+      </div>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 2: ARCHITECTURE                 -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">~</span>ARCHITECTURE &middot; FILE STRUCTURE</h2>
+      <p class="tutorial-subtitle">Two files. <code>_gem</code> is the <code>#compdef</code> consumer that zsh's completion system autoloads; the plugin entrypoint wires <code>src/</code> into <code>fpath</code> and adds the publishing aliases.</p>
+
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th class="num">Lines</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>src/_gem</td><td class="num">115</td><td><code>#compdef gem</code> &mdash; 30-entry <code>_1st_arguments</code> subcommand table; <code>__gem_installed</code> queries <code>gem list --local --no-versions</code>; <code>__gem_search</code> + <code>__gem_search_mem</code> drive remote completion; per-subcommand <code>case</code> dispatch for <code>install</code> / <code>list</code> / <code>uninstall</code> / <code>update</code> / <code>build</code></td></tr>
+          <tr><td>zsh-gem-completion.plugin.zsh</td><td class="num">12</td><td>Three aliases (<code>gemb</code>=<code>gem build *.gemspec</code>, <code>gemp</code>=<code>gem push *.gem</code>, <code>gemy</code>=<code>gem yank $1 -v $2</code> function); <code>ZSH_ARGZERO</code> self-locate; <code>fpath=("${0:h}/src" $fpath)</code></td></tr>
+          <tr class="total-row"><td>Total source</td><td class="num">127</td><td>Two files, one completion namespace</td></tr>
+        </tbody>
+      </table>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 3: COMPLETION COVERAGE          -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">@</span>COMPLETION COVERAGE</h2>
+      <p class="tutorial-subtitle">Full <code>gem</code> command surface, with the killer feature being live remote completion against rubygems.org for the <code>install</code> code path.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>30 subcommands with descriptions</h4>
+          <p><code>_1st_arguments</code> hand-curates every gem(1) subcommand and its one-line description so the menu shows what each one does:</p>
+          <ul>
+            <li><strong>install/uninstall:</strong> <code>install</code>, <code>uninstall</code>, <code>update</code>, <code>pristine</code>, <code>cleanup</code></li>
+            <li><strong>query:</strong> <code>list</code>, <code>search</code>, <code>query</code>, <code>specification</code>, <code>which</code>, <code>contents</code>, <code>dependency</code>, <code>outdated</code>, <code>stale</code></li>
+            <li><strong>publish:</strong> <code>build</code>, <code>push</code>, <code>yank</code>, <code>fetch</code>, <code>owner</code>, <code>mirror</code>, <code>cert</code>, <code>sources</code></li>
+            <li><strong>server:</strong> <code>server</code>, <code>generate_index</code>, <code>environment</code>, <code>rdoc</code></li>
+            <li><strong>misc:</strong> <code>check</code>, <code>help</code>, <code>lock</code>, <code>unpack</code></li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h4>Live <code>gem install</code> completion (remote)</h4>
+          <p><code>gem install &lt;TAB&gt;</code> &rarr; <code>__gem_search</code> &rarr; <code>gem search -q $PREFIX</code> &rarr; per-line parse (<code>name version_string</code>) &rarr; <code>_describe -t remote-gem 'remote gems' tmp_ary</code>. Names and versions are <code>${(q)...}</code>-quoted so colons/spaces/special chars survive zsh's <code>name:desc</code> tuple format.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Installed-gem completion (local)</h4>
+          <p><code>gem uninstall</code> and <code>gem update</code> fall through to <code>__gem_installed</code>, which calls <code>gem list --local --no-versions</code> and feeds the result to <code>_wanted installed_gems expl 'installed gems' compadd -a installed_gems</code>. Cheap, no network, always current with the local install set.</p>
+        </div>
+        <div class="feature-card">
+          <h4><code>gem build</code> file completion</h4>
+          <p><code>gem build &lt;TAB&gt;</code> &rarr; <code>_files -g "*.gemspec"</code>. Glob-restricted to <code>.gemspec</code> files only, so <code>gem build</code> never offers random tarballs or directories.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Top-level flags</h4>
+          <p>Before the subcommand state, <code>_arguments -s</code> offers <code>-v</code>/<code>--version</code> and <code>-h</code>/<code>--help</code> with mutex declarations (<code>(-v --version)</code>) so the menu doesn't double-list them.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Publishing aliases (3)</h4>
+          <p>Workflow shortcuts that pre-fill the common arguments:</p>
+          <ul>
+            <li><code>gemb</code> &rarr; <code>gem build *.gemspec</code> (auto-glob current dir)</li>
+            <li><code>gemp</code> &rarr; <code>gem push *.gem</code> (push freshly-built tarball)</li>
+            <li><code>gemy &lt;name&gt; &lt;version&gt;</code> &rarr; <code>gem yank $1 -v $2</code> (function, not alias, so args order is enforced)</li>
+          </ul>
+        </div>
+      </div>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 4: TEST COVERAGE                -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">#</span>TEST COVERAGE</h2>
+      <p class="tutorial-subtitle">41 zunit <code>@test</code> cases across 7 files, plus 21 structural shell gates from the umbrella.</p>
+
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th>Test file</th>
+            <th class="num">@test count</th>
+            <th>What it pins</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>tests/t-plugin.zsh</td><td class="num">14</td><td>Plugin-entrypoint surface &mdash; 3 aliases register, <code>gemy</code> defined as function (not alias) with positional args, <code>fpath</code> contains <code>src/</code>, <code>_gem</code> starts with <code>#compdef gem</code></td></tr>
+          <tr><td>tests/t-contract.zsh</td><td class="num">3</td><td>Entrypoint stem matches plugin-dir basename; <code>src/_gem</code> exists; <code>#compdef gem</code> first non-comment line</td></tr>
+          <tr><td>tests/t-contract2.zsh</td><td class="num">5</td><td><code>ZSH_ARGZERO</code> self-locate idiom intact; <code>fpath</code> manipulation uses <code>"${0:h}/src"</code> form</td></tr>
+          <tr><td>tests/t-contract3.zsh</td><td class="num">5</td><td>Completion-function shape &mdash; <code>__gem_search</code>, <code>__gem_search_mem</code>, <code>__gem_installed</code> defined; cache-file name is <code>gem_${PREFIX}_cache</code></td></tr>
+          <tr><td>tests/t-contract4.zsh</td><td class="num">5</td><td><code>zstyle ':completion:*:*:gem:*:remote-gem' list-grouped false</code> present (menu-rendering pin)</td></tr>
+          <tr><td>tests/t-aliases.zsh</td><td class="num">4</td><td>Each of <code>gemb</code> / <code>gemp</code> resolves to documented expansion; <code>gemy</code> is a function with two positional args</td></tr>
+          <tr><td>tests/t-syntax.zsh</td><td class="num">5</td><td><code>zsh -n</code> on entrypoint + <code>src/_gem</code> + all helper scripts</td></tr>
+          <tr class="total-row"><td>Total</td><td class="num">41</td><td>7 zunit files</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:1.5px;color:var(--cyan);margin-top:1.5rem;">// STRUCTURAL GATES (21 shell scripts)</h3>
+      <p style="font-size:11.5px;color:var(--text-dim);line-height:1.6;">Same 21-script umbrella gate-set as the rest of the family: 9 <code>docs/*.html</code> gates (h1, body/html closing, final newline, no deprecated tags, https-only, no inline handlers, no placeholder hrefs, target-blank-rel-noopener) + 4 README + 3 man-page + 2 tests/ + 2 workflows + 1 cargo (vacuous).</p>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 5: KEY DESIGN DECISIONS         -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">?</span>KEY DESIGN DECISIONS</h2>
+      <p class="tutorial-subtitle">Five places this plugin diverges from upstream OMZ and why.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>Live remote completion for <code>install</code></h4>
+          <p>Upstream OMZ gem completion offers <em>installed</em> gems for <code>install</code> too &mdash; useless, because the gem you want to install is by definition not installed yet. This plugin shells out to <code>gem search -q $PREFIX</code> and offers the rubygems.org index. Cost is one rubygems network round-trip per prefix; absorbed by both cache layers after first hit.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Two-layer cache (in-shell + on-disk)</h4>
+          <p><code>__gem_search_mem</code> checks an in-shell typeset array (<code>__gems_${PREFIX}</code>) first &mdash; nanosecond hit. Misses fall through to <code>_retrieve_cache</code> for disk-backed persistence across shell sessions. Hits eventually fall through to <code>gem search</code> on network. Three tiers, latency growing by ~3 orders of magnitude each.</p>
+        </div>
+        <div class="feature-card">
+          <h4><code>${(q)...}</code> quoting on parsed output</h4>
+          <p>Gem names + version strings can contain colons, spaces, parentheses (<code>rspec-rails:7.0.0 (rspec-rails)</code>-style descriptions). <code>_describe</code>'s <code>tag:description</code> tuple format would mis-split on raw colons. <code>${(q)tag}:${(q)desc}</code> backslash-quotes both halves so zsh parses them as a single tuple.</p>
+        </div>
+        <div class="feature-card">
+          <h4><code>list-grouped false</code> for remote-gem</h4>
+          <p>Default zsh menu groups candidates by description &mdash; useful when many gems share a description, useless when every remote search hit has a unique version+description pair (which is the common case). The zstyle scope <code>:completion:*:*:gem:*:remote-gem</code> is tight enough that it only affects the remote-search code path; local <code>gem list</code> completion uses default grouping.</p>
+        </div>
+        <div class="feature-card">
+          <h4><code>gemy</code> as function, not alias</h4>
+          <p><code>gemy &lt;name&gt; &lt;version&gt;</code> needs the two args in a specific order (<code>gem yank $1 -v $2</code>). An alias couldn't enforce that &mdash; <code>alias gemy='gem yank'</code> would let users type <code>gemy 0.0.0 some-gem</code> and produce nonsense. The function form makes the contract typeable.</p>
+        </div>
+      </div>
+
+    </main>
+
+    <footer style="text-align:center;padding:2rem;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;letter-spacing:2px;">
+      ZSH-GEM-COMPLETION ENGINEERING REPORT &middot; 127 LOC &middot; 30 SUBCOMMANDS &middot; 41 ZUNIT @TEST CASES &middot; 21 STRUCTURAL GATES &middot; LIVE RUBYGEMS.ORG SEARCH &middot; MENKETECHNOLOGIES
+    </footer>
+  </div>
+
+  <script>
+    const html = document.documentElement;
+    const btnTheme = document.getElementById('btnTheme');
+    const btnCrt = document.getElementById('btnCrt');
+    const btnNeon = document.getElementById('btnNeon');
+    const crtH = document.getElementById('crtH');
+    const crtV = document.getElementById('crtV');
+    btnTheme?.addEventListener('click', () => {
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+    btnCrt?.addEventListener('click', () => {
+      btnCrt.classList.toggle('active');
+      const on = btnCrt.classList.contains('active');
+      if (crtH) crtH.style.display = on ? '' : 'none';
+      if (crtV) crtV.style.display = on ? '' : 'none';
+    });
+    btnNeon?.addEventListener('click', () => {
+      btnNeon.classList.toggle('active');
+      document.querySelector('.app')?.classList.toggle('neon-off');
+    });
+  </script>
+</body>
+</html>
