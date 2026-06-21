@@ -160,6 +160,29 @@
         </div>
       </div>
 
+      <h3 style="font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:1.5px;color:var(--cyan);margin-top:1.5rem;">// PER-SUBCOMMAND DISPATCH</h3>
+      <p style="font-size:11.5px;color:var(--text-dim);line-height:1.6;">After the top-level <code>_arguments</code> call resolves the <code>-&gt;subcmds</code> state, the <code>case "$words[1]"</code> block in <code>src/_gem</code> wires argument completion for exactly five subcommands. Every other subcommand completes its name from <code>_1st_arguments</code> and then offers no further candidates.</p>
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th>Subcommand</th>
+            <th>Source</th>
+            <th>Completion logic</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>gem install</td><td>Remote</td><td><code>__gem_search</code> &rarr; <code>gem search -q $PREFIX 2&gt;/dev/null</code>, parsed line-by-line as <code>read tag desc</code>, stored <code>${(q)tag}:${(q)desc}</code>, emitted via <code>_describe -t remote-gem 'remote gems' tmp_ary</code></td></tr>
+          <tr><td>gem uninstall</td><td>Local</td><td><code>__gem_installed</code> &rarr; <code>_wanted installed_gems expl 'installed gems' compadd -a installed_gems</code></td></tr>
+          <tr><td>gem update</td><td>Local</td><td>same <code>__gem_installed</code> + <code>_wanted</code> path as <code>uninstall</code> (shared <code>uninstall|update)</code> case arm)</td></tr>
+          <tr><td>gem list</td><td>Local</td><td><code>__gem_installed</code> &rarr; <code>_requested installed_gems expl 'installed gems' compadd -a installed_gems</code>, guarded by <code>[[ "$state" == forms ]]</code></td></tr>
+          <tr><td>gem build</td><td>Files</td><td><code>_files -g "*.gemspec"</code> &mdash; glob-restricted to gemspecs</td></tr>
+          <tr><td>(all other 25)</td><td>&mdash;</td><td>Subcommand-name completion only, from the 30-entry <code>_1st_arguments</code> table</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:1.5px;color:var(--cyan);margin-top:1.5rem;">// CACHE KEYING</h3>
+      <p style="font-size:11.5px;color:var(--text-dim);line-height:1.6;">Both remote helpers key the cache on the typed prefix: the disk store name is <code>gem_${PREFIX}_cache</code> and the in-shell array (used by <code>__gem_search_mem</code>) is <code>__gems_${PREFIX}</code>. So <code>gem install ra&lt;TAB&gt;</code> and <code>gem install re&lt;TAB&gt;</code> occupy distinct cache slots &mdash; one network hit per distinct prefix. <code>__gem_search</code> uses <code>_retrieve_cache</code> / <code>_store_cache</code> for on-disk persistence; <code>__gem_search_mem</code> additionally checks the in-shell array first and only falls through to disk and then network on a miss.</p>
+
       <hr class="section-rule">
 
       <!-- ═══════════════════════════════════════ -->
@@ -177,13 +200,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td>tests/t-plugin.zsh</td><td class="num">14</td><td>Plugin-entrypoint surface &mdash; 3 aliases register, <code>gemy</code> defined as function (not alias) with positional args, <code>fpath</code> contains <code>src/</code>, <code>_gem</code> starts with <code>#compdef gem</code></td></tr>
+          <tr><td>tests/t-plugin.zsh</td><td class="num">17</td><td>Plugin-entrypoint surface &mdash; 3 aliases register, <code>gemy</code> defined as function (not alias) with positional args, <code>fpath</code> contains <code>src/</code>, <code>_gem</code> starts with <code>#compdef gem</code></td></tr>
           <tr><td>tests/t-contract.zsh</td><td class="num">3</td><td>Entrypoint stem matches plugin-dir basename; <code>src/_gem</code> exists; <code>#compdef gem</code> first non-comment line</td></tr>
           <tr><td>tests/t-contract2.zsh</td><td class="num">5</td><td><code>ZSH_ARGZERO</code> self-locate idiom intact; <code>fpath</code> manipulation uses <code>"${0:h}/src"</code> form</td></tr>
           <tr><td>tests/t-contract3.zsh</td><td class="num">5</td><td>Completion-function shape &mdash; <code>__gem_search</code>, <code>__gem_search_mem</code>, <code>__gem_installed</code> defined; cache-file name is <code>gem_${PREFIX}_cache</code></td></tr>
           <tr><td>tests/t-contract4.zsh</td><td class="num">5</td><td><code>zstyle ':completion:*:*:gem:*:remote-gem' list-grouped false</code> present (menu-rendering pin)</td></tr>
           <tr><td>tests/t-aliases.zsh</td><td class="num">4</td><td>Each of <code>gemb</code> / <code>gemp</code> resolves to documented expansion; <code>gemy</code> is a function with two positional args</td></tr>
-          <tr><td>tests/t-syntax.zsh</td><td class="num">5</td><td><code>zsh -n</code> on entrypoint + <code>src/_gem</code> + all helper scripts</td></tr>
+          <tr><td>tests/t-syntax.zsh</td><td class="num">2</td><td><code>zsh -n</code> on entrypoint + <code>src/_gem</code> + all helper scripts</td></tr>
           <tr class="total-row"><td>Total</td><td class="num">41</td><td>7 zunit files</td></tr>
         </tbody>
       </table>

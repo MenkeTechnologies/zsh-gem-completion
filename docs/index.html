@@ -71,6 +71,20 @@
       <p class="tutorial-subtitle"><strong><code>gem install &lt;TAB&gt;</code> queries the remote index.</strong> All functionality of the OMZ gem completion plus a live <code>gem search</code>-backed completer for <code>gem install</code>.</p>
 
       <section class="tutorial-section">
+        <h2>Overview</h2>
+        <p>zsh-gem-completion is a single <code>#compdef gem</code> completion (<code>src/_gem</code>) plus a small plugin entrypoint (<code>zsh-gem-completion.plugin.zsh</code>). It started from the Homebrew/OMZ gem completion and adds one behavior the upstream lacks: <code>gem install &lt;TAB&gt;</code> completes <em>remote</em> gems from the live output of <code>gem search</code>, not just gems already installed locally.</p>
+        <ul>
+          <li><strong>30 subcommands</strong> with one-line man-page descriptions, offered when you type <code>gem &lt;TAB&gt;</code>.</li>
+          <li><strong>Remote completion for <code>install</code></strong> &mdash; <code>__gem_search</code> shells out to <code>gem search -q $PREFIX</code> and renders the rubygems.org results with descriptions.</li>
+          <li><strong>Local completion for <code>uninstall</code> / <code>update</code> / <code>list</code></strong> &mdash; <code>__gem_installed</code> reads <code>gem list --local --no-versions</code>.</li>
+          <li><strong>File completion for <code>build</code></strong> &mdash; <code>_files -g "*.gemspec"</code>, glob-restricted to gemspecs.</li>
+          <li><strong>Two-tier cache</strong> &mdash; an in-shell array (<code>__gems_${PREFIX}</code>) and the on-disk <code>_store_cache</code> / <code>_retrieve_cache</code> store keyed <code>gem_${PREFIX}_cache</code>.</li>
+          <li><strong>3 publishing shortcuts</strong> &mdash; <code>gemb</code>, <code>gemp</code>, and the <code>gemy</code> function for the gem-author build/push/yank loop.</li>
+        </ul>
+        <p>Requires zsh, the zsh completion system (<code>compinit</code>), and the <code>gem</code> command on <code>$PATH</code>. The remote-search path additionally relies on <code>gem search</code> reaching rubygems.org.</p>
+      </section>
+
+      <section class="tutorial-section">
         <h2>Install</h2>
 <pre># Zinit
 zinit ice lucid nocompile
@@ -88,10 +102,102 @@ source zsh-gem-completion/zsh-gem-completion.plugin.zsh</pre>
 
       <section class="tutorial-section">
         <h2>Examples</h2>
-<pre>gem install &lt;TAB&gt;        # live remote gem name completion
-gem install ra&lt;TAB&gt;      # rails, rack, rake, ...
-gem update &lt;TAB&gt;         # OMZ-style local gem completion
-gem &lt;TAB&gt;                # subcommand completion</pre>
+<pre>gem &lt;TAB&gt;                # subcommand completion (30 entries, with descriptions)
+gem install &lt;TAB&gt;        # live remote gem name completion via `gem search`
+gem install ra&lt;TAB&gt;      # remote search for the `ra` prefix: rails, rack, rake, ...
+gem uninstall &lt;TAB&gt;      # locally-installed gems only (gem list --local --no-versions)
+gem update &lt;TAB&gt;         # locally-installed gems only
+gem list &lt;TAB&gt;           # locally-installed gems (in the `forms` state)
+gem build &lt;TAB&gt;          # *.gemspec files in the current directory
+
+gemb                    # gem build *.gemspec
+gemp                    # gem push *.gem
+gemy my-gem 1.2.3       # gem yank my-gem -v 1.2.3</pre>
+        <p>First TAB on a remote prefix pays one <code>gem search</code> network round-trip; subsequent TABs for the same prefix are served from cache &mdash; the in-shell array within the session, and the on-disk store across sessions.</p>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Subcommand reference</h2>
+        <p>Every entry in <code>_1st_arguments</code> (<code>src/_gem</code>), offered on <code>gem &lt;TAB&gt;</code>. Descriptions are the exact strings shown in the completion menu.</p>
+        <table class="example-tbl">
+          <tr><td>build</td><td>Build a gem from a gemspec</td></tr>
+          <tr><td>cert</td><td>Manage RubyGems certificates and signing settings</td></tr>
+          <tr><td>check</td><td>Check a gem repository for added or missing files</td></tr>
+          <tr><td>cleanup</td><td>Clean up old versions of installed gems in the local repository</td></tr>
+          <tr><td>contents</td><td>Display the contents of the installed gems</td></tr>
+          <tr><td>dependency</td><td>Show the dependencies of an installed gem</td></tr>
+          <tr><td>environment</td><td>Display information about the RubyGems environment</td></tr>
+          <tr><td>fetch</td><td>Download a gem and place it in the current directory</td></tr>
+          <tr><td>generate_index</td><td>Generates the index files for a gem server directory</td></tr>
+          <tr><td>help</td><td>Provide help on the <code>gem</code> command</td></tr>
+          <tr><td>install</td><td>Install a gem into the local repository</td></tr>
+          <tr><td>list</td><td>Display gems whose name starts with STRING</td></tr>
+          <tr><td>lock</td><td>Generate a lockdown list of gems</td></tr>
+          <tr><td>mirror</td><td>Mirror all gem files (requires rubygems-mirror)</td></tr>
+          <tr><td>outdated</td><td>Display all gems that need updates</td></tr>
+          <tr><td>owner</td><td>Manage gem owners on RubyGems.org.</td></tr>
+          <tr><td>pristine</td><td>Restores installed gems to pristine condition from files located in the gem cache</td></tr>
+          <tr><td>push</td><td>Push a gem up to RubyGems.org</td></tr>
+          <tr><td>query</td><td>Query gem information in local or remote repositories</td></tr>
+          <tr><td>rdoc</td><td>Generates RDoc for pre-installed gems</td></tr>
+          <tr><td>search</td><td>Display all gems whose name contains STRING</td></tr>
+          <tr><td>server</td><td>Documentation and gem repository HTTP server</td></tr>
+          <tr><td>sources</td><td>Manage the sources and cache file RubyGems uses to search for gems</td></tr>
+          <tr><td>specification</td><td>Display gem specification (in yaml)</td></tr>
+          <tr><td>stale</td><td>List gems along with access times</td></tr>
+          <tr><td>uninstall</td><td>Uninstall gems from the local repository</td></tr>
+          <tr><td>unpack</td><td>Unpack an installed gem to the current directory</td></tr>
+          <tr><td>update</td><td>Update installed gems to the latest version</td></tr>
+          <tr><td>which</td><td>Find the location of a library file you can require</td></tr>
+          <tr><td>yank</td><td>Remove a specific gem version release from RubyGems.org</td></tr>
+        </table>
+        <p>Top-level flags, offered before a subcommand is chosen: <code>-v</code>/<code>--version</code> (show version) and <code>-h</code>/<code>--help</code> (show help), each declared mutually-exclusive with its long form.</p>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Completion behavior</h2>
+        <p>After the top-level <code>_arguments</code> dispatch, <code>src/_gem</code> branches per first word. Only these subcommands have argument completion wired; the rest complete the subcommand name only.</p>
+        <table class="example-tbl">
+          <tr><td>gem &lt;TAB&gt;</td><td>Lists all 30 subcommands with descriptions (<code>_describe -t commands</code>).</td></tr>
+          <tr><td>gem install &lt;TAB&gt;</td><td>Remote search: <code>__gem_search</code> &rarr; <code>gem search -q $PREFIX</code> &rarr; parse <code>name version</code> &rarr; <code>_describe -t remote-gem</code>.</td></tr>
+          <tr><td>gem uninstall &lt;TAB&gt;</td><td>Local: <code>__gem_installed</code> &rarr; <code>gem list --local --no-versions</code> &rarr; <code>_wanted installed_gems</code>.</td></tr>
+          <tr><td>gem update &lt;TAB&gt;</td><td>Local: same <code>__gem_installed</code> path as <code>uninstall</code>.</td></tr>
+          <tr><td>gem list &lt;TAB&gt;</td><td>Local installed gems, requested via <code>_requested installed_gems</code> (<code>forms</code> state).</td></tr>
+          <tr><td>gem build &lt;TAB&gt;</td><td>Files: <code>_files -g "*.gemspec"</code> &mdash; gemspecs only.</td></tr>
+        </table>
+        <p><strong>Remote-search parse + quoting:</strong> each line of <code>gem search</code> output is read as <code>tag desc</code> (gem name, then the remainder of the line), then stored as <code>${(q)tag}:${(q)desc}</code>. The <code>(q)</code> flag backslash-quotes both halves so colons or spaces in the name/version don't mis-split zsh's <code>name:description</code> tuple. <code>__gem_search</code> is the active dispatcher; <code>__gem_search_mem</code> is the in-shell-array variant kept in the source as the session-cache implementation.</p>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Aliases &amp; functions</h2>
+        <p>Registered by <code>zsh-gem-completion.plugin.zsh</code> for the gem-author build/push/yank loop:</p>
+        <table class="example-tbl">
+          <tr><td>gemb</td><td><code>alias gemb="gem build *.gemspec"</code> &mdash; build the gemspec in the current directory.</td></tr>
+          <tr><td>gemp</td><td><code>alias gemp="gem push *.gem"</code> &mdash; push the freshly-built <code>.gem</code> tarball.</td></tr>
+          <tr><td>gemy GEM VER</td><td><code>function gemy { gem yank $1 -v $2 }</code> &mdash; yank version <code>VER</code> of <code>GEM</code>. A function (not an alias) so the two positional args are passed in order.</td></tr>
+        </table>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Configuration</h2>
+        <p>The completion sets one <code>zstyle</code> in <code>src/_gem</code>:</p>
+<pre>zstyle ':completion:*:*:gem:*:remote-gem' list-grouped false</pre>
+        <p>This scopes only the remote-search results (the <code>remote-gem</code> tag) and turns off description-grouping, so each remote gem renders on its own row. The local <code>gem list</code> path is untouched and keeps the default grouping. You can override completion presentation with your own <code>zstyle</code> lines after the plugin loads; the entrypoint also prepends <code>src/</code> to <code>fpath</code> so <code>compinit</code> can autoload <code>_gem</code>.</p>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Troubleshooting</h2>
+        <table class="example-tbl">
+          <tr><td>No completion at all</td><td>Ensure <code>compinit</code> runs in <code>~/.zshrc</code> and that <code>src/</code> is on <code>fpath</code> (the plugin entrypoint prepends it). With Zinit, load via <code>zinit load MenkeTechnologies/zsh-gem-completion</code>.</td></tr>
+          <tr><td><code>gem install &lt;TAB&gt;</code> is slow / empty</td><td>The first TAB per prefix runs <code>gem search</code> over the network. A slow or offline rubygems.org delays or empties results; the result is cached after the first successful hit.</td></tr>
+          <tr><td>Stale remote results</td><td>Remote results are cached on disk per prefix (<code>gem_${PREFIX}_cache</code>). Clear zsh's completion cache to force a fresh <code>gem search</code>.</td></tr>
+          <tr><td><code>uninstall</code>/<code>update</code> shows remote gems</td><td>It shouldn't &mdash; those route to <code>__gem_installed</code> (local only). If you see remote results, another <code>_gem</code> earlier on <code>fpath</code> is shadowing this one.</td></tr>
+        </table>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Engineering report</h2>
+        <p>For the file-by-file breakdown, completion-coverage matrix, test inventory, and design-decision notes, see the <a href="report.html">Engineering Report</a>.</p>
       </section>
 
       <section class="tutorial-section">
