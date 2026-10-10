@@ -62,7 +62,7 @@
             <a href="https://github.com/MenkeTechnologies/MenkeTechnologiesMeta" target="_blank" rel="noopener noreferrer">Meta</a>
           </nav>
           <p style="margin:0.35rem 0 0;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:0.03em;opacity:0.75;">
-            Full OMZ gem completion &middot; live remote <code>gem search</code> for <code>gem install</code> &middot; in-shell + on-disk dual-layer cache &middot; <code>list-grouped false</code> zstyle pin &middot; 3 publishing shortcuts
+            Full OMZ gem completion &middot; live remote <code>gem search</code> for <code>gem install</code> &middot; on-disk cache &middot; <code>list-grouped false</code> zstyle pin &middot; 3 publishing shortcuts
           </p>
         </div>
         <div class="tutorial-toolbar">
@@ -79,7 +79,7 @@
       <!-- SECTION 1: EXECUTIVE SUMMARY           -->
       <!-- ═══════════════════════════════════════ -->
       <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>EXECUTIVE SUMMARY</h2>
-      <p class="tutorial-subtitle">zsh-gem-completion is a <code>#compdef gem</code> completion plugin that ships the entire OMZ gem-completion surface (30 subcommands &mdash; <code>install</code>, <code>uninstall</code>, <code>update</code>, <code>list</code>, <code>build</code>, <code>cert</code>, <code>fetch</code>, <code>owner</code>, <code>push</code>, <code>yank</code>, etc., all with man-page-quality descriptions) <strong>plus</strong> live remote package completion for <code>gem install &lt;TAB&gt;</code>. The remote dispatcher (<code>__gem_search</code>) shells out to <code>gem search -q $PREFIX 2&gt;/dev/null</code> and parses two-column output (<code>name version_string</code>) into zsh's <code>_describe</code> format with descriptions rendered inline in the menu. Two layers of caching absorb network cost: an in-shell typeset array (<code>__gems_${PREFIX}</code>) for the rest of the shell session, and <code>_retrieve_cache</code> / <code>_store_cache</code> on disk for cross-session persistence. The plugin entrypoint also registers three publishing shortcuts (<code>gemb</code> build, <code>gemp</code> push, <code>gemy</code> yank-with-version) for the standard gem-author workflow. A single <code>zstyle</code> line (<code>list-grouped false</code>) tells zsh's menu to render each candidate on its own row instead of grouping by description &mdash; legibility win for the remote-search code path where descriptions are long and unique.</p>
+      <p class="tutorial-subtitle">zsh-gem-completion is a <code>#compdef gem</code> completion plugin that ships the entire OMZ gem-completion surface (30 subcommands &mdash; <code>install</code>, <code>uninstall</code>, <code>update</code>, <code>list</code>, <code>build</code>, <code>cert</code>, <code>fetch</code>, <code>owner</code>, <code>push</code>, <code>yank</code>, etc., all with man-page-quality descriptions) <strong>plus</strong> live remote package completion for <code>gem install &lt;TAB&gt;</code>. The remote dispatcher (<code>__gem_search</code>) shells out to <code>gem search -q $PREFIX 2&gt;/dev/null</code> and parses two-column output (<code>name version_string</code>) into zsh's <code>_describe</code> format with the version string shown as the description in the menu. Results are cached on disk via <code>_retrieve_cache</code> / <code>_store_cache</code> (active when the <code>use-cache</code> zstyle is enabled); the in-shell array variant <code>__gem_search_mem</code> is defined but not called by the <code>install</code> dispatcher. The plugin entrypoint also registers three publishing shortcuts (<code>gemb</code> build, <code>gemp</code> push, <code>gemy</code> yank-with-version) for the standard gem-author workflow. A single <code>zstyle</code> line (<code>list-grouped false</code>) tells zsh's menu to render each candidate on its own row instead of grouping by description for the remote-search code path.</p>
 
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-val">127</div><div class="stat-label">Total LOC (src + plugin)</div></div>
@@ -107,7 +107,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td>src/_gem</td><td class="num">115</td><td><code>#compdef gem</code> &mdash; 30-entry <code>_1st_arguments</code> subcommand table; <code>__gem_installed</code> queries <code>gem list --local --no-versions</code>; <code>__gem_search</code> + <code>__gem_search_mem</code> drive remote completion; per-subcommand <code>case</code> dispatch for <code>install</code> / <code>list</code> / <code>uninstall</code> / <code>update</code> / <code>build</code></td></tr>
+          <tr><td>src/_gem</td><td class="num">115</td><td><code>#compdef gem</code> &mdash; 30-entry <code>_1st_arguments</code> subcommand table; <code>__gem_installed</code> queries <code>gem list --local --no-versions</code>; <code>__gem_search</code> drives remote completion (<code>__gem_search_mem</code> is defined but not called); per-subcommand <code>case</code> dispatch for <code>install</code> / <code>list</code> / <code>uninstall</code> / <code>update</code> / <code>build</code></td></tr>
           <tr><td>zsh-gem-completion.plugin.zsh</td><td class="num">12</td><td>Three aliases (<code>gemb</code>=<code>gem build *.gemspec</code>, <code>gemp</code>=<code>gem push *.gem</code>, <code>gemy</code>=<code>gem yank $1 -v $2</code> function); <code>ZSH_ARGZERO</code> self-locate; <code>fpath=("${0:h}/src" $fpath)</code></td></tr>
           <tr class="total-row"><td>Total source</td><td class="num">127</td><td>Two files, one completion namespace</td></tr>
         </tbody>
@@ -119,7 +119,7 @@
       <!-- SECTION 3: COMPLETION COVERAGE          -->
       <!-- ═══════════════════════════════════════ -->
       <h2 class="tutorial-title"><span class="step-hash">@</span>COMPLETION COVERAGE</h2>
-      <p class="tutorial-subtitle">Full <code>gem</code> command surface, with the killer feature being live remote completion against rubygems.org for the <code>install</code> code path.</p>
+      <p class="tutorial-subtitle">Subcommand-name completion for the <code>gem</code> command, plus live remote completion against rubygems.org for the <code>install</code> code path.</p>
 
       <div class="feature-grid">
         <div class="feature-card">
@@ -147,7 +147,7 @@
         </div>
         <div class="feature-card">
           <h4>Top-level flags</h4>
-          <p>Before the subcommand state, <code>_arguments -s</code> offers <code>-v</code>/<code>--version</code> and <code>-h</code>/<code>--help</code> with mutex declarations (<code>(-v --version)</code>) so the menu doesn't double-list them.</p>
+          <p>Before the subcommand state, <code>_arguments</code> offers <code>-v</code>/<code>--version</code> and <code>-h</code>/<code>--help</code> with mutex declarations (<code>(-v --version)</code>) so the menu doesn't double-list them.</p>
         </div>
         <div class="feature-card">
           <h4>Publishing aliases (3)</h4>
@@ -181,7 +181,7 @@
       </table>
 
       <h3 style="font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:1.5px;color:var(--cyan);margin-top:1.5rem;">// CACHE KEYING</h3>
-      <p style="font-size:11.5px;color:var(--text-dim);line-height:1.6;">Both remote helpers key the cache on the typed prefix: the disk store name is <code>gem_${PREFIX}_cache</code> and the in-shell array (used by <code>__gem_search_mem</code>) is <code>__gems_${PREFIX}</code>. So <code>gem install ra&lt;TAB&gt;</code> and <code>gem install re&lt;TAB&gt;</code> occupy distinct cache slots &mdash; one network hit per distinct prefix. <code>__gem_search</code> uses <code>_retrieve_cache</code> / <code>_store_cache</code> for on-disk persistence; <code>__gem_search_mem</code> additionally checks the in-shell array first and only falls through to disk and then network on a miss.</p>
+      <p style="font-size:11.5px;color:var(--text-dim);line-height:1.6;">Both remote helpers key the cache on the typed prefix: the disk store name is <code>gem_${PREFIX}_cache</code> and the in-shell array (used only by <code>__gem_search_mem</code>) is <code>__gems_${PREFIX}</code>. So <code>gem install ra&lt;TAB&gt;</code> and <code>gem install re&lt;TAB&gt;</code> occupy distinct cache slots &mdash; one network hit per distinct prefix. <code>__gem_search</code>, the helper the <code>install</code> arm calls, uses <code>_retrieve_cache</code> / <code>_store_cache</code> for on-disk persistence, which zsh only honors when the <code>use-cache</code> zstyle is enabled. <code>__gem_search_mem</code> additionally checks the in-shell array first, but nothing in <code>src/_gem</code> calls it.</p>
 
       <hr class="section-rule">
 
@@ -225,19 +225,19 @@
       <div class="feature-grid">
         <div class="feature-card">
           <h4>Live remote completion for <code>install</code></h4>
-          <p>Upstream OMZ gem completion offers <em>installed</em> gems for <code>install</code> too &mdash; useless, because the gem you want to install is by definition not installed yet. This plugin shells out to <code>gem search -q $PREFIX</code> and offers the rubygems.org index. Cost is one rubygems network round-trip per prefix; absorbed by both cache layers after first hit.</p>
+          <p>Upstream OMZ gem completion offers <em>installed</em> gems for <code>install</code> too &mdash; useless, because the gem you want to install is by definition not installed yet. This plugin shells out to <code>gem search -q $PREFIX</code> and offers the rubygems.org index. Cost is one rubygems network round-trip per prefix; later TABs for the same prefix are served from the on-disk cache when <code>use-cache</code> is enabled.</p>
         </div>
         <div class="feature-card">
-          <h4>Two-layer cache (in-shell + on-disk)</h4>
-          <p><code>__gem_search_mem</code> checks an in-shell typeset array (<code>__gems_${PREFIX}</code>) first &mdash; nanosecond hit. Misses fall through to <code>_retrieve_cache</code> for disk-backed persistence across shell sessions. Hits eventually fall through to <code>gem search</code> on network. Three tiers, latency growing by ~3 orders of magnitude each.</p>
+          <h4>On-disk cache (<code>_store_cache</code> / <code>_retrieve_cache</code>)</h4>
+<p><code>__gem_search</code> checks <code>_retrieve_cache</code> for <code>gem_${PREFIX}_cache</code> and falls through to <code>gem search</code> on a miss, then writes the result with <code>_store_cache</code>. The cache is only active when the <code>use-cache</code> zstyle is enabled. <code>__gem_search_mem</code> adds an in-shell array tier but is not wired into the <code>install</code> arm.</p>
         </div>
         <div class="feature-card">
           <h4><code>${(q)...}</code> quoting on parsed output</h4>
-          <p>Gem names + version strings can contain colons, spaces, parentheses (<code>rspec-rails:7.0.0 (rspec-rails)</code>-style descriptions). <code>_describe</code>'s <code>tag:description</code> tuple format would mis-split on raw colons. <code>${(q)tag}:${(q)desc}</code> backslash-quotes both halves so zsh parses them as a single tuple.</p>
+          <p><code>gem search</code> prints each result as <code>name (version)</code>, so the description half contains spaces and parentheses, and a name or version string may contain colons. <code>_describe</code>'s <code>tag:description</code> tuple format would mis-split on raw colons. <code>${(q)tag}:${(q)desc}</code> backslash-quotes both halves so zsh parses them as a single tuple.</p>
         </div>
         <div class="feature-card">
           <h4><code>list-grouped false</code> for remote-gem</h4>
-          <p>Default zsh menu groups candidates by description &mdash; useful when many gems share a description, useless when every remote search hit has a unique version+description pair (which is the common case). The zstyle scope <code>:completion:*:*:gem:*:remote-gem</code> is tight enough that it only affects the remote-search code path; local <code>gem list</code> completion uses default grouping.</p>
+          <p>Default zsh menu groups candidates by description &mdash; useful when many gems share a description, not useful when each remote search hit carries a distinct version string. The zstyle scope <code>:completion:*:*:gem:*:remote-gem</code> is tight enough that it only affects the remote-search code path; local <code>gem list</code> completion uses default grouping.</p>
         </div>
         <div class="feature-card">
           <h4><code>gemy</code> as function, not alias</h4>

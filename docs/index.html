@@ -75,10 +75,10 @@
         <p>zsh-gem-completion is a single <code>#compdef gem</code> completion (<code>src/_gem</code>) plus a small plugin entrypoint (<code>zsh-gem-completion.plugin.zsh</code>). It started from the Homebrew/OMZ gem completion and adds one behavior the upstream lacks: <code>gem install &lt;TAB&gt;</code> completes <em>remote</em> gems from the live output of <code>gem search</code>, not just gems already installed locally.</p>
         <ul>
           <li><strong>30 subcommands</strong> with one-line man-page descriptions, offered when you type <code>gem &lt;TAB&gt;</code>.</li>
-          <li><strong>Remote completion for <code>install</code></strong> &mdash; <code>__gem_search</code> shells out to <code>gem search -q $PREFIX</code> and renders the rubygems.org results with descriptions.</li>
+          <li><strong>Remote completion for <code>install</code></strong> &mdash; <code>__gem_search</code> shells out to <code>gem search -q $PREFIX</code> and renders each result as the gem name with the version string that <code>gem search</code> prints.</li>
           <li><strong>Local completion for <code>uninstall</code> / <code>update</code> / <code>list</code></strong> &mdash; <code>__gem_installed</code> reads <code>gem list --local --no-versions</code>.</li>
           <li><strong>File completion for <code>build</code></strong> &mdash; <code>_files -g "*.gemspec"</code>, glob-restricted to gemspecs.</li>
-          <li><strong>Two-tier cache</strong> &mdash; an in-shell array (<code>__gems_${PREFIX}</code>) and the on-disk <code>_store_cache</code> / <code>_retrieve_cache</code> store keyed <code>gem_${PREFIX}_cache</code>.</li>
+          <li><strong>On-disk cache</strong> &mdash; <code>_store_cache</code> / <code>_retrieve_cache</code> keyed <code>gem_${PREFIX}_cache</code>; zsh only reads and writes it when the <code>use-cache</code> zstyle is enabled. The in-shell-array variant <code>__gem_search_mem</code> is defined in <code>src/_gem</code> but not called by the <code>install</code> dispatcher.</li>
           <li><strong>3 publishing shortcuts</strong> &mdash; <code>gemb</code>, <code>gemp</code>, and the <code>gemy</code> function for the gem-author build/push/yank loop.</li>
         </ul>
         <p>Requires zsh, the zsh completion system (<code>compinit</code>), and the <code>gem</code> command on <code>$PATH</code>. The remote-search path additionally relies on <code>gem search</code> reaching rubygems.org.</p>
@@ -113,7 +113,7 @@ gem build &lt;TAB&gt;          # *.gemspec files in the current directory
 gemb                    # gem build *.gemspec
 gemp                    # gem push *.gem
 gemy my-gem 1.2.3       # gem yank my-gem -v 1.2.3</pre>
-        <p>First TAB on a remote prefix pays one <code>gem search</code> network round-trip; subsequent TABs for the same prefix are served from cache &mdash; the in-shell array within the session, and the on-disk store across sessions.</p>
+        <p>First TAB on a remote prefix pays one <code>gem search</code> network round-trip; subsequent TABs for the same prefix are served from the on-disk completion cache when the <code>use-cache</code> zstyle is enabled.</p>
       </section>
 
       <section class="tutorial-section">
@@ -190,7 +190,7 @@ gemy my-gem 1.2.3       # gem yank my-gem -v 1.2.3</pre>
         <table class="example-tbl">
           <tr><td>No completion at all</td><td>Ensure <code>compinit</code> runs in <code>~/.zshrc</code> and that <code>src/</code> is on <code>fpath</code> (the plugin entrypoint prepends it). With Zinit, load via <code>zinit load MenkeTechnologies/zsh-gem-completion</code>.</td></tr>
           <tr><td><code>gem install &lt;TAB&gt;</code> is slow / empty</td><td>The first TAB per prefix runs <code>gem search</code> over the network. A slow or offline rubygems.org delays or empties results; the result is cached after the first successful hit.</td></tr>
-          <tr><td>Stale remote results</td><td>Remote results are cached on disk per prefix (<code>gem_${PREFIX}_cache</code>). Clear zsh's completion cache to force a fresh <code>gem search</code>.</td></tr>
+          <tr><td>Stale remote results</td><td>Remote results are cached on disk per prefix (<code>gem_${PREFIX}_cache</code>). With <code>use-cache</code> enabled, clear the entry under zsh's completion cache directory (<code>cache-path</code> style, default <code>${ZDOTDIR:-$HOME}/.zcompcache</code>) to force a fresh <code>gem search</code>.</td></tr>
           <tr><td><code>uninstall</code>/<code>update</code> shows remote gems</td><td>It shouldn't &mdash; those route to <code>__gem_installed</code> (local only). If you see remote results, another <code>_gem</code> earlier on <code>fpath</code> is shadowing this one.</td></tr>
         </table>
       </section>
@@ -208,11 +208,11 @@ gemy my-gem 1.2.3       # gem yank my-gem -v 1.2.3</pre>
           <li><a href="https://github.com/MenkeTechnologies/zsh-cargo-completion">zsh-cargo-completion</a> &mdash; live <code>cargo add</code> / <code>cargo install</code> completion</li>
           <li><a href="https://github.com/MenkeTechnologies/zsh-cpan-completion">zsh-cpan-completion</a> &mdash; live MetaCPAN <code>cpan</code> / <code>cpanm</code> completion</li>
           <li><a href="https://github.com/MenkeTechnologies/zsh-dotnet-completion">zsh-dotnet-completion</a> &mdash; dotnet CLI completion</li>
-          <li><a href="https://github.com/MenkeTechnologies/zsh-expand">zsh-expand</a> &mdash; spacebar expansion (11,688 tests)</li>
-          <li><a href="https://github.com/MenkeTechnologies/zsh-git-acp">zsh-git-acp</a> &mdash; 159 git aliases + add/commit/push keybindings</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-expand">zsh-expand</a> &mdash; spacebar alias expansion</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-git-acp">zsh-git-acp</a> &mdash; git aliases + add/commit/push keybindings</li>
           <li><a href="https://github.com/MenkeTechnologies/zsh-git-repo-cache">zsh-git-repo-cache</a> &mdash; index every git repo on disk</li>
           <li><a href="https://github.com/MenkeTechnologies/zsh-learn">zsh-learn</a> &mdash; MySQL-backed learning collection / quiz</li>
-          <li><a href="https://github.com/MenkeTechnologies/zsh-more-completions">zsh-more-completions</a> &mdash; 47,393-file mega completion corpus</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-more-completions">zsh-more-completions</a> &mdash; mega completion corpus</li>
           <li><a href="https://github.com/MenkeTechnologies/zsh-nginx">zsh-nginx</a> &mdash; nginx commands + service-wrapper aliases</li>
           <li><a href="https://github.com/MenkeTechnologies/zsh-pip-description-completion">zsh-pip-description-completion</a> &mdash; pip remote completion with descriptions</li>
           <li><a href="https://github.com/MenkeTechnologies/zsh-sed-sub">zsh-sed-sub</a> &mdash; in-place sed substitution on the command line</li>
